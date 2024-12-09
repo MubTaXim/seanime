@@ -2,9 +2,9 @@
 
 app = "seanime"  # Replace with your Fly.io app name
 
-# Fly will automatically build from Dockerfile, no need to specify a build step unless you want custom behavior
+# Remove the image reference. Fly.io will auto-detect the Dockerfile
 [build]
-  image = "path/to/your/Dockerfile"  # Fly.io auto-detects the Dockerfile
+  # image = "path/to/your/Dockerfile"  # This line should be removed
 
 # Define environment variables if needed (adjust based on your app requirements)
 [env]
@@ -29,4 +29,3 @@ app = "seanime"  # Replace with your Fly.io app name
     grace_period = "10s"
     interval = "10s"
     retries = 3
-    

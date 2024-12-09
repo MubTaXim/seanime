@@ -1,7 +1,7 @@
-# Use a slim Debian-based image
-FROM debian:bullseye-slim
+# Stage 1: Build the Go backend
+FROM golang:1.23-bullseye AS build
 
-# Install necessary packages
+# Install necessary dependencies
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         curl \
@@ -9,12 +9,11 @@ RUN apt-get update && \
         gnupg \
         wget \
         tar \
-        jq \
-        golang-go && \
+        jq && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Jellyfin's FFmpeg
+# Install Jellyfin's FFmpeg (if needed)
 RUN curl -fsSL https://repo.jellyfin.org/debian/jellyfin_team.gpg.key | gpg --dearmor -o /usr/share/keyrings/jellyfin-archive-keyring.gpg && \
     echo "deb [signed-by=/usr/share/keyrings/jellyfin-archive-keyring.gpg] https://repo.jellyfin.org/debian bullseye main" | tee /etc/apt/sources.list.d/jellyfin.list && \
     apt-get update && \
@@ -22,22 +21,55 @@ RUN curl -fsSL https://repo.jellyfin.org/debian/jellyfin_team.gpg.key | gpg --de
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Set working directory
-WORKDIR /app/
+# Set up working directory for the backend
+WORKDIR /app
 
-# Install the latest version of the app
+# Fetch the latest release of the backend app
 RUN LATEST_VERSION=$(curl -s https://api.github.com/repos/5rahim/seanime/releases/latest | jq -r .tag_name) && \
     VERSION_NO_V=$(echo ${LATEST_VERSION} | sed 's/v//') && \
-    echo "Latest version: ${LATEST_VERSION}" && \
-    echo "Version without v: ${VERSION_NO_V}" && \
     wget "https://github.com/5rahim/seanime/releases/download/${LATEST_VERSION}/seanime-${VERSION_NO_V}_Linux_x86_64.tar.gz" && \
     tar -xzf "seanime-${VERSION_NO_V}_Linux_x86_64.tar.gz" && \
     rm "seanime-${VERSION_NO_V}_Linux_x86_64.tar.gz" && \
     chmod +x seanime
 
-# Set environment variables
+# Set environment for FFmpeg
 ENV PATH="/usr/lib/jellyfin-ffmpeg/:$PATH"
-ENV PORT 8080  # Set the correct port for Fly.io
 
-# Make the app listen on 0.0.0.0
-CMD ["./seanime", "--bind", "0.0.0.0", "--port", "8080"]
+# Stage 2: Build the web frontend
+FROM node:18-bullseye AS web-build
+
+WORKDIR /seanime-web
+
+# Install dependencies for the web frontend
+COPY seanime-web/package.json seanime-web/package-lock.json ./
+RUN npm install
+
+# Build the web interface (assuming you're using Next.js)
+RUN npm run build
+
+# Stage 3: Combine the backend and frontend into a final image
+FROM debian:bullseye-slim
+
+# Install required system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        curl \
+        ca-certificates \
+        gnupg \
+        wget \
+        tar && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy the built backend and frontend from previous stages
+COPY --from=build /app/seanime /app/seanime
+COPY --from=web-build /seanime-web/out /app/web
+
+# Set working directory for final app
+WORKDIR /app
+
+# Expose port 43000 for the Go server
+EXPOSE 43000
+
+# Start the Go server
+CMD ["./seanime"]

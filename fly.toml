@@ -1,24 +1,17 @@
-# fly.toml file
-app = "seanime"  # Your Fly.io app name
+app = "seanime"  # The name of your app on Fly.io
 
+# Build section to tell Fly.io to build using your Dockerfile
 [build]
-  # This should point to the correct location of the Dockerfile
-  dockerfile = "Dockerfile"  # Ensure the Dockerfile is named "Dockerfile" and is in the root directory
+  # Point to your Dockerfile (this assumes it's in the root directory)
+  dockerfile = "Dockerfile"
 
-[env]
-  PORT = "43000"  # This is the port your app will listen on
-
+# Deployment section
 [[services]]
-  internal_port = 43000  # Internal port your app listens to
+  http_checks = []
+  internal_port = 8080  # The internal port where your app listens, change if needed
   protocol = "tcp"
+  regions = ["ams", "ewr", "sfo"]  # Specify regions you want to deploy to (example: Amsterdam, New York, San Francisco)
 
-  # Expose your app to the outside world
-  [services.ports]
-    port = 80
-    handlers = ["http"]
-
-  # Enable health checks
-  [services.tcp_checks]
-    grace_period = "10s"
-    interval = "10s"
-    retries = 3
+  [[services.ports]]
+    port = "80"  # Expose app on port 80
+    handlers = ["http"]  # Use HTTP handler

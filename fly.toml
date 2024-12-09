@@ -1,27 +1,20 @@
 # fly.toml file
+app = "seanime"  # Your Fly.io app name
 
-app = "seanime"  # Replace with your Fly.io app name
-
-# Remove the image reference. Fly.io will auto-detect the Dockerfile
 [build]
-  # image = "path/to/your/Dockerfile"  # This line should be removed
+  # This should point to the correct location of the Dockerfile
+  dockerfile = "Dockerfile"  # Ensure the Dockerfile is named "Dockerfile" and is in the root directory
 
-# Define environment variables if needed (adjust based on your app requirements)
 [env]
-  PORT = "43000"  # Set the Go server port to match your configuration
+  PORT = "43000"  # This is the port your app will listen on
 
-# Define the allowed public ports for the app
-[experimental]
-  allowed_public_ports = ["80", "443"]
-
-# Service configuration for your application
 [[services]]
-  internal_port = 43000  # Your Go server listens on this port
+  internal_port = 43000  # Internal port your app listens to
   protocol = "tcp"
 
-  # Define port 80 as the public-facing port
+  # Expose your app to the outside world
   [services.ports]
-    port = 80  # Expose this port to the outside world
+    port = 80
     handlers = ["http"]
 
   # Enable health checks
